@@ -1,20 +1,9 @@
-# qubership-repo-template
+# qubership-apihub-aux-tools
 
-Click [here](https://github.com/Netcracker/qubership-repo-template/generate) to create your copy of this repository.
+This repository contains various tools created around Qubership APIHUB for various needs: dev tooling, test tooling, automation, workaround tools for end users, etc
 
-## Installation
+## Tools
 
-This section typically describes the process of preparing the project for use, including required dependencies and general setup steps.
+### Tool which helps automate operation groups creation and export of the group
 
-## Build
-
-This section outlines the build process, tools used, and general information about preparing project artifacts.
-
-## Testing
-
-This section provides a general description of testing strategies, tools, and approaches relevant to the project.
-
-## Debug
-
-This section provides an overview of debugging approaches and tools relevant to the project.
-
+[Golang CLI tool apihub-op-group-creator](./apihub-op-group-creator)

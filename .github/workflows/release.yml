@@ -1,0 +1,67 @@
+name: release
+
+on:
+  push:
+    tags:
+      - '*'
+
+permissions:
+  contents: write
+
+jobs:
+  build_release:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Set up Go
+      uses: actions/setup-go@v4
+      with:
+        go-version: '1.23'
+
+    - name: Build apihub-op-group-creator for Linux
+      run: cd ./apihub-op-group-creator && go build -v ./...
+      env:
+        GOOS: linux
+        GOARCH: amd64
+
+    - name: Build apihub-op-group-creator for Windows
+      env:
+        GOOS: windows
+        GOARCH: amd64
+      run: cd ./apihub-op-group-creator && go build -v ./...
+
+    - name: Test apihub-op-group-creator
+      run: cd ./apihub-op-group-creator && go test -v ./...
+  
+    - name: release
+      uses: actions/create-release@v1
+      id: create_release
+      with:
+        draft: false
+        prerelease: false
+        release_name: Release ${{ github.ref }}
+        tag_name: rel_${{ github.ref }}
+        # body_path: CHANGELOG.md
+      env:
+        GITHUB_TOKEN: ${{ github.token }}
+        
+    - name: upload apihub-op-group-creator windows artifact
+      uses: actions/upload-release-asset@v1
+      env:
+        GITHUB_TOKEN: ${{ github.token }}
+      with:
+        upload_url: ${{ steps.create_release.outputs.upload_url }}
+        asset_path: ./apihub-op-group-creator/apihub-op-group-creator.exe
+        asset_name: apihub-op-group-creator.exe
+        asset_content_type: application/octet-stream
+
+    - name: upload apihub-op-group-creator linux artifact
+      uses: actions/upload-release-asset@v1
+      env:
+        GITHUB_TOKEN: ${{ github.token }}
+      with:
+        upload_url: ${{ steps.create_release.outputs.upload_url }}
+        asset_path: ./apihub-op-group-creator/apihub-op-group-creator
+        asset_name: apihub-op-group-creator
+        asset_content_type: application/octet-stream
