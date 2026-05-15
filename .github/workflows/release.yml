@@ -19,6 +19,21 @@ jobs:
       with:
         go-version: '1.23'
 
+    - name: Build apihub-portal-package-copy for Linux
+      run: cd ./apihub-portal-package-copy && go build -v -o apihub-portal-package-copy .
+      env:
+        GOOS: linux
+        GOARCH: amd64
+
+    - name: Build apihub-portal-package-copy for Windows
+      env:
+        GOOS: windows
+        GOARCH: amd64
+      run: cd ./apihub-portal-package-copy && go build -v -o apihub-portal-package-copy.exe .
+
+    - name: Test apihub-portal-package-copy
+      run: cd ./apihub-portal-package-copy && go test -v ./...
+
     - name: Build apihub-op-group-creator for Linux
       run: cd ./apihub-op-group-creator && go build -v ./...
       env:
@@ -64,4 +79,24 @@ jobs:
         upload_url: ${{ steps.create_release.outputs.upload_url }}
         asset_path: ./apihub-op-group-creator/apihub-op-group-creator
         asset_name: apihub-op-group-creator
+        asset_content_type: application/octet-stream
+
+    - name: upload apihub-portal-package-copy windows artifact
+      uses: actions/upload-release-asset@v1
+      env:
+        GITHUB_TOKEN: ${{ github.token }}
+      with:
+        upload_url: ${{ steps.create_release.outputs.upload_url }}
+        asset_path: ./apihub-portal-package-copy/apihub-portal-package-copy.exe
+        asset_name: apihub-portal-package-copy.exe
+        asset_content_type: application/octet-stream
+
+    - name: upload apihub-portal-package-copy linux artifact
+      uses: actions/upload-release-asset@v1
+      env:
+        GITHUB_TOKEN: ${{ github.token }}
+      with:
+        upload_url: ${{ steps.create_release.outputs.upload_url }}
+        asset_path: ./apihub-portal-package-copy/apihub-portal-package-copy
+        asset_name: apihub-portal-package-copy
         asset_content_type: application/octet-stream

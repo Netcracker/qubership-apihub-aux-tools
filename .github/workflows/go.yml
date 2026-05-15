@@ -26,3 +26,9 @@ jobs:
 
     - name: Test apihub-op-group-creator
       run: cd ./apihub-op-group-creator && go test -v ./...
+
+    - name: Build apihub-portal-package-copy
+      run: cd ./apihub-portal-package-copy && go build -v ./...
+
+    - name: Test apihub-portal-package-copy
+      run: cd ./apihub-portal-package-copy && go test -v ./...

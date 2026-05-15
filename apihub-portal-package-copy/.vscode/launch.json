@@ -1,0 +1,42 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "apihub-portal-package-copy",
+      "type": "go",
+      "request": "launch",
+      "mode": "debug",
+      "program": "${workspaceFolder}/qubership-apihub-aux-tools/apihub-portal-package-copy",
+      "cwd": "${workspaceFolder}/qubership-apihub-aux-tools/apihub-portal-package-copy",
+      "args": [
+        "--work-dir",
+        "${workspaceFolder}/qubership-apihub-aux-tools/apihub-portal-package-copy/.debug/run1",
+        "--source-url",
+        "https://qubership-apihub.localtest.me/",
+        "--source-api-key",
+        "${env:AHPC_API_KEY}",
+        "--source-workspace-id",
+        "QS",
+        "--source-root-id",
+        "BSS",
+        "--versions",
+        "2025.2,2025.3",
+        "--exclude-packages",
+        "QS.BSS.BFF",
+        "--target-url",
+        "https://qubership-apihub.localtest.me/",
+        "--target-api-key",
+        "${env:AHPC_API_KEY}",
+        "--target-workspace-id",
+        "QS2",
+        "--insecure-skip-tls-verify",
+        "--debug"
+      ],
+      "env": {
+        "AHPC_API_KEY": ""
+      },
+      "console": "integratedTerminal",
+      "showLog": false
+    }
+  ]
+}
