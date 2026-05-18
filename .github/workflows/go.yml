@@ -32,3 +32,9 @@ jobs:
 
     - name: Test apihub-portal-package-copy
       run: cd ./apihub-portal-package-copy && go test -v ./...
+
+    - name: Build apihub-build-config-diff
+      run: cd ./apihub-build-config-diff && go build -v ./...
+
+    - name: Test apihub-build-config-diff
+      run: cd ./apihub-build-config-diff && go test -v ./...
