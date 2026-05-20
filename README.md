@@ -21,6 +21,7 @@ Each tool lives in its **own subdirectory** with its own `go.mod`, build instruc
 |-----------|----------|---------|
 | [`apihub-op-group-creator`](./apihub-op-group-creator) | Go | Create a REST **operation group** from operations filtered by a **custom tag**, then export the group spec (YAML/JSON) via the async export API. |
 | [`apihub-portal-package-copy`](./apihub-portal-package-copy) | Go | **Copy published packages** (and optionally whole workspace subtrees) from one APIHUB instance to another using **original sources + publish config** REST APIs; supports resume, wildcards (`*` for versions or workspace scope), and **exclude lists**. |
+| [`apihub-build-config-diff`](./apihub-build-config-diff) | Go | Compare build config JSON `refs` to quickly identify added, removed, and changed references. |
 
 ### apihub-op-group-creator
 
@@ -60,10 +61,24 @@ Build:
 cd apihub-portal-package-copy && go build .
 ```
 
+### apihub-build-config-diff
+
+**What it does:** Compares the `refs` arrays from two APIHUB build config JSON files and reports added, removed, and changed refs. It can print a human-readable report or stable JSON output.
+
+**When to use:** Release/config review where you need to quickly see new and deleted `refId` values, plus version or parent changes for refs that exist in both configs.
+
+Details: **[apihub-build-config-diff/README.md](./apihub-build-config-diff/README.md)**.
+
+Build:
+
+```bash
+cd apihub-build-config-diff && go build .
+```
+
 ## CI and releases
 
 - **Continuous integration:** [`.github/workflows/go.yml`](.github/workflows/go.yml) — `go build` and `go test` for each tool on pushes and pull requests to `main`.
-- **Release binaries:** [`.github/workflows/release.yml`](.github/workflows/release.yml) — on **tag** push, builds Linux and Windows artifacts for both tools and attaches them to a GitHub release.
+- **Release binaries:** [`.github/workflows/release.yml`](.github/workflows/release.yml) — on **tag** push, builds Linux and Windows artifacts for all tools and attaches them to a GitHub release.
 
 ## Adding a new tool
 
