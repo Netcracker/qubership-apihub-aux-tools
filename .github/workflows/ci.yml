@@ -1,0 +1,121 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  changes:
+    runs-on: ubuntu-latest
+    outputs:
+      ci: ${{ steps.filter.outputs.ci }}
+      apihub-op-group-creator: ${{ steps.filter.outputs.apihub-op-group-creator }}
+      apihub-portal-package-copy: ${{ steps.filter.outputs.apihub-portal-package-copy }}
+      apihub-build-config-diff: ${{ steps.filter.outputs.apihub-build-config-diff }}
+      apihub-api-diff: ${{ steps.filter.outputs.apihub-api-diff }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: dorny/paths-filter@v3
+        id: filter
+        with:
+          filters: |
+            ci:
+              - '.github/workflows/ci.yml'
+            apihub-op-group-creator:
+              - 'apihub-op-group-creator/**'
+            apihub-portal-package-copy:
+              - 'apihub-portal-package-copy/**'
+            apihub-build-config-diff:
+              - 'apihub-build-config-diff/**'
+            apihub-api-diff:
+              - 'apihub-api-diff/**'
+
+  apihub-op-group-creator:
+    needs: changes
+    if: needs.changes.outputs.ci == 'true' || needs.changes.outputs.apihub-op-group-creator == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-go@v4
+        with:
+          go-version: '1.23'
+
+      - name: Build
+        run: cd ./apihub-op-group-creator && go build -v ./...
+
+      - name: Test
+        run: cd ./apihub-op-group-creator && go test -v ./...
+
+  apihub-portal-package-copy:
+    needs: changes
+    if: needs.changes.outputs.ci == 'true' || needs.changes.outputs.apihub-portal-package-copy == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-go@v4
+        with:
+          go-version: '1.23'
+
+      - name: Build
+        run: cd ./apihub-portal-package-copy && go build -v ./...
+
+      - name: Test
+        run: cd ./apihub-portal-package-copy && go test -v ./...
+
+  apihub-build-config-diff:
+    needs: changes
+    if: needs.changes.outputs.ci == 'true' || needs.changes.outputs.apihub-build-config-diff == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-go@v4
+        with:
+          go-version: '1.23'
+
+      - name: Build
+        run: cd ./apihub-build-config-diff && go build -v ./...
+
+      - name: Test
+        run: cd ./apihub-build-config-diff && go test -v ./...
+
+  apihub-api-diff:
+    needs: changes
+    if: needs.changes.outputs.ci == 'true' || needs.changes.outputs.apihub-api-diff == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Configure npm auth
+        shell: bash
+        env:
+          NPMRC: ${{ secrets.NPMRC }}
+        run: |
+          if [ -n "$NPMRC" ]; then
+            printf '%s\n' "$NPMRC" > ~/.npmrc
+          fi
+
+      - name: Install
+        run: npm install
+        working-directory: apihub-api-diff
+
+      - name: Typecheck
+        run: npm run typecheck
+        working-directory: apihub-api-diff
+
+      - name: Test
+        run: npm test
+        working-directory: apihub-api-diff
+
+      - name: Build
+        run: npm run build
+        working-directory: apihub-api-diff

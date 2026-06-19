@@ -8,11 +8,11 @@ Typical uses:
 - Reduce manual work for administrators and integrators.
 - Provide workarounds when a dedicated product feature is not available.
 
-Each tool lives in its **own subdirectory** with its own `go.mod`, build instructions, and flags. Read the linked README before running a tool in production.
+Each tool lives in its **own subdirectory** with its own build instructions and flags. Read the linked README before running a tool in production.
 
 ## Requirements
 
-- **Go 1.23** (see [`.github/workflows/go.yml`](.github/workflows/go.yml)) to build from source.
+- **Go 1.23** and **Node.js ≥20** to build tools from source (see [CI](#ci-and-releases)).
 - Appropriate **APIHUB permissions** (personal access token or API key, depending on the tool) and network access to the target instance.
 
 ## Tools
@@ -22,6 +22,7 @@ Each tool lives in its **own subdirectory** with its own `go.mod`, build instruc
 | [`apihub-op-group-creator`](./apihub-op-group-creator) | Go | Create a REST **operation group** from operations filtered by a **custom tag**, then export the group spec (YAML/JSON) via the async export API. |
 | [`apihub-portal-package-copy`](./apihub-portal-package-copy) | Go | **Copy published packages** (and optionally whole workspace subtrees) from one APIHUB instance to another using **original sources + publish config** REST APIs; supports resume, wildcards (`*` for versions or workspace scope), and **exclude lists**. |
 | [`apihub-build-config-diff`](./apihub-build-config-diff) | Go | Compare build config JSON `refs` to quickly identify added, removed, and changed references. |
+| [`apihub-api-diff`](./apihub-api-diff) | Node.js | CLI and local MCP server for categorized diff of OpenAPI, AsyncAPI, and GraphQL specifications. |
 
 ### apihub-op-group-creator
 
@@ -75,16 +76,70 @@ Build:
 cd apihub-build-config-diff && go build .
 ```
 
+### apihub-api-diff
+
+**What it does:** Compares two API description files (OpenAPI, AsyncAPI, GraphQL SDL, etc.) and produces a categorized changelog (breaking, risky, non-breaking) using the same rules as APIHUB api-processor. Can run as a CLI or as a local MCP server for IDE agents.
+
+**When to use:** API migration impact review, CI checks on spec changes, or agent-assisted diff summaries in Cursor and other MCP clients.
+
+Details, flags, and MCP setup: **[apihub-api-diff/README.md](./apihub-api-diff/README.md)**.
+
+Build (requires npm access to `@netcracker/*` packages on GitHub Packages):
+
+```bash
+cd apihub-api-diff && npm install && npm run build
+apihub-api-diff previous.yaml current.yaml --format md
+apihub-api-diff mcp
+```
+
 ## CI and releases
 
-- **Continuous integration:** [`.github/workflows/go.yml`](.github/workflows/go.yml) — `go build` and `go test` for each tool on pushes and pull requests to `main`.
-- **Release binaries:** [`.github/workflows/release.yml`](.github/workflows/release.yml) — on **tag** push, builds Linux and Windows artifacts for all tools and attaches them to a GitHub release.
+This repository is a **monorepo**: each tool is versioned and released independently.
+
+### Continuous integration
+
+[`.github/workflows/ci.yml`](.github/workflows/ci.yml) runs on pushes and pull requests to `main`. Only tools **touched in the change** are built and tested (via path filters). Changing the CI workflow itself runs all tools.
+
+| Tool | Trigger paths |
+|------|---------------|
+| Go tools | `apihub-op-group-creator/**`, `apihub-portal-package-copy/**`, `apihub-build-config-diff/**` |
+| apihub-api-diff | `apihub-api-diff/**` |
+
+`apihub-api-diff` CI requires repository secret **`NPMRC`** with GitHub Packages auth for `@netcracker/*`:
+
+```
+@netcracker:registry=https://npm.pkg.github.com/
+//npm.pkg.github.com/:_authToken=<github-token>
+registry=https://registry.npmjs.org/
+```
+
+### Manual releases
+
+Releases are **not** triggered by tags. Run the workflow for the tool you need from GitHub Actions (**Run workflow**), enter a semver (e.g. `v1.0.0` or `1.0.0`), and the workflow creates tag `<tool>/vX.Y.Z` plus a GitHub Release with binaries.
+
+| Tool | Tag prefix | Run release |
+|------|------------|-------------|
+| apihub-op-group-creator | `apihub-op-group-creator/v*` | [Release apihub-op-group-creator](https://github.com/Netcracker/qubership-apihub-aux-tools/actions/workflows/release-apihub-op-group-creator.yml) |
+| apihub-portal-package-copy | `apihub-portal-package-copy/v*` | [Release apihub-portal-package-copy](https://github.com/Netcracker/qubership-apihub-aux-tools/actions/workflows/release-apihub-portal-package-copy.yml) |
+| apihub-build-config-diff | `apihub-build-config-diff/v*` | [Release apihub-build-config-diff](https://github.com/Netcracker/qubership-apihub-aux-tools/actions/workflows/release-apihub-build-config-diff.yml) |
+| apihub-api-diff | `apihub-api-diff/v*` | [Release apihub-api-diff](https://github.com/Netcracker/qubership-apihub-aux-tools/actions/workflows/release-apihub-api-diff.yml) |
+
+Go tools publish Linux and Windows binaries. `apihub-api-diff` also publishes a macOS binary.
+
+### Dependency updates (Renovate)
+
+[`renovate.json`](renovate.json) tracks npm dependencies in `apihub-api-diff`, including `@netcracker/qubership-apihub-api-processor` from GitHub Packages. Renovate opens PRs when new versions are published.
+
+Requirements:
+
+1. Enable the [Renovate GitHub App](https://github.com/apps/renovate) for this repository (or the Netcracker org).
+2. Configure a host rule / token with `read:packages` for `npm.pkg.github.com` in Renovate settings so it can resolve `@netcracker/*` versions.
 
 ## Adding a new tool
 
-1. Add a **new top-level directory** (own `go.mod`, `README.md`, clear purpose).
-2. Extend **`.github/workflows/go.yml`** and **`release.yml`** with build, test, and upload steps (follow existing tools).
-3. Register the tool in the **table** and the short section above in this file.
+1. Add a **new top-level directory** (own `go.mod` or `package.json`, `README.md`, clear purpose).
+2. Extend [`.github/workflows/ci.yml`](.github/workflows/ci.yml) with a path filter and build job; add [`.github/workflows/release-<tool>.yml`](.github/workflows/) with `workflow_dispatch`.
+3. Register the tool in the **table**, the short section above, and the **Manual releases** table in this file.
 
 ## License
 

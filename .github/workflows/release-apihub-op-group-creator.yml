@@ -1,0 +1,60 @@
+name: Release apihub-op-group-creator
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: Release version (e.g. v1.0.0)
+        required: true
+        type: string
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Normalize release version
+        id: version
+        shell: bash
+        run: |
+          VERSION="${{ inputs.version }}"
+          VERSION="${VERSION#v}"
+          if ! [[ "$VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z.-]+)?(\+[0-9A-Za-z.-]+)?$ ]]; then
+            echo "Invalid semver: ${{ inputs.version }}" >&2
+            exit 1
+          fi
+          echo "tag=apihub-op-group-creator/v${VERSION}" >> "$GITHUB_OUTPUT"
+          echo "name=v${VERSION}" >> "$GITHUB_OUTPUT"
+
+      - uses: actions/setup-go@v4
+        with:
+          go-version: '1.23'
+
+      - name: Test
+        run: cd ./apihub-op-group-creator && go test -v ./...
+
+      - name: Build Linux
+        run: cd ./apihub-op-group-creator && go build -v -o apihub-op-group-creator .
+        env:
+          GOOS: linux
+          GOARCH: amd64
+
+      - name: Build Windows
+        run: cd ./apihub-op-group-creator && go build -v -o apihub-op-group-creator.exe .
+        env:
+          GOOS: windows
+          GOARCH: amd64
+
+      - name: Publish release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ steps.version.outputs.tag }}
+          name: apihub-op-group-creator ${{ steps.version.outputs.name }}
+          generate_release_notes: true
+          files: |
+            apihub-op-group-creator/apihub-op-group-creator
+            apihub-op-group-creator/apihub-op-group-creator.exe

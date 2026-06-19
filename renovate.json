@@ -1,0 +1,28 @@
+{
+  "$schema": "https://docs.renovatebot.com/renovate-schema.json",
+  "extends": [
+    "config:recommended",
+    ":semanticCommitTypeAll(chore)"
+  ],
+  "enabledManagers": ["npm"],
+  "includePaths": [
+    "apihub-api-diff/package.json"
+  ],
+  "rangeStrategy": "replace",
+  "packageRules": [
+    {
+      "description": "Track @netcracker packages from GitHub Packages",
+      "matchPackageNames": ["@netcracker/**"],
+      "registryUrls": ["https://npm.pkg.github.com/netcracker"]
+    },
+    {
+      "description": "Group api-processor updates separately from other npm deps",
+      "matchPackageNames": ["@netcracker/qubership-apihub-api-processor"],
+      "groupName": "apihub-api-processor",
+      "commitMessageTopic": "api-processor"
+    }
+  ],
+  "ignorePaths": [
+    "**/node_modules/**"
+  ]
+}

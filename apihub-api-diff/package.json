@@ -1,0 +1,41 @@
+{
+  "name": "@netcracker/qubership-apihub-api-diff-cli-and-mcp",
+  "version": "0.1.0",
+  "description": "Standalone CLI and local MCP server for categorized API diffs powered by APIHUB api-processor.",
+  "license": "Apache-2.0",
+  "type": "module",
+  "bin": {
+    "apihub-api-diff": "./dist/cli.cjs"
+  },
+  "files": [
+    "dist",
+    "README.md",
+    "LICENSE"
+  ],
+  "scripts": {
+    "clean": "rimraf dist",
+    "typecheck": "tsc --noEmit",
+    "build": "npm run clean && node esbuild.config.mjs",
+    "build:binary": "npm run build && node scripts/build-sea.mjs",
+    "test": "node --import tsx --test test/diff-engine.test.ts test/mcp-server.test.ts",
+    "lint:check": "eslint -c .eslintrc.json . --ext .js,.mjs,.ts,.json --ignore-path .gitignore --max-warnings 0"
+  },
+  "dependencies": {
+    "@netcracker/qubership-apihub-api-processor": "5.2.1",
+    "openapi-types": "^12.1.3"
+  },
+  "devDependencies": {
+    "@types/node": "^20.19.0",
+    "@typescript-eslint/eslint-plugin": "^7.18.0",
+    "@typescript-eslint/parser": "^7.18.0",
+    "esbuild": "^0.27.0",
+    "eslint": "^8.57.1",
+    "postject": "^1.0.0-alpha.6",
+    "rimraf": "^6.1.0",
+    "tsx": "^4.20.0",
+    "typescript": "^5.9.0"
+  },
+  "engines": {
+    "node": ">=20.0.0"
+  }
+}
