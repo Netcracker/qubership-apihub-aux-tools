@@ -91,4 +91,4 @@ Add a repository secret named `NPMRC` with the full `.npmrc` content required to
 registry=https://registry.npmjs.org/
 ```
 
-Push a tag like `v0.1.0` to create a GitHub Release. The release workflow builds Linux, Windows, and macOS binaries and attaches them to the release.
+Push a tag like `v1.0.0` to create a GitHub Release. The release workflow builds Linux, Windows, and macOS binaries and attaches them to the release.

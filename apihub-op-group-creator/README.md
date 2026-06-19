@@ -15,7 +15,7 @@ Or use release binary file.
 
 ## Run arguments
 Examples:
-`-apihubURL http://127.0.0.1:8081 -packageId WS.TEST -version 123 -group test -token dslfjsdnfckjdenacknewkdnskakjzxkfx`
+`-apihubURL http://127.0.0.1:8081 -packageId WS.TEST -version 123 -group test -token dslfjsdnfckjdenacknewkdnskakjzxkf`
 
 
 `.\apihub-op-group-creator.exe -apihubURL http://127.0.0.1:8081 -packageId WS.ABC -version 456 -token sjdljhwqhdjklqwdkqwhdjk -group special_operations -x-key x-special -x-value aaa`

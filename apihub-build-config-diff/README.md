@@ -40,7 +40,7 @@ go run . --old old.json --new new.json --output refs-diff.txt
 - `--new`: required path to the compared build config JSON.
 - `--format`: output format, either `text` or `json`; defaults to `text`.
 - `--only`: optional comma-separated category filter: `added`, `removed`, `changed`.
-- `--output`: optional output file path; defaults to stdout.
+- `--output`: optional output file path; defaults to stdout
 
 ## Development
 

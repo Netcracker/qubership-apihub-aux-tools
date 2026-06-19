@@ -240,6 +240,6 @@ Target: `POST /api/v2/packages`, `POST /api/v2/packages/{id}/publish`, poll `GET
 
 Not used for source artifacts: **`/export`** flows.
 
-### Roadmap / TODO
+### Roadmap / TODOs
 
 - **Revision-aware copy (future):** optionally clone **all** revisions per logical version in **correct order** (not only the row returned by default `/versions`), including cross-revision metadata and any API extensions required for full fidelity.

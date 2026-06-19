@@ -32,7 +32,7 @@ jobs:
 
       - uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version: 22
 
       - name: Configure npm auth
         shell: bash
@@ -59,7 +59,7 @@ jobs:
         shell: bash
         run: |
           mkdir -p release-assets
-          cp "${{ matrix.binary-path }}" "release-assets/${{ matrix.asset-name }}"
+          cp "apihub-api-diff/${{ matrix.binary-path }}" "release-assets/${{ matrix.asset-name }}"
 
       - uses: actions/upload-artifact@v4
         with:
