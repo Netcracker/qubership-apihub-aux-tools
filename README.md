@@ -126,14 +126,14 @@ Releases are **not** triggered by tags. Run the workflow for the tool you need f
 
 Go tools publish Linux and Windows binaries. `apihub-api-diff` also publishes a macOS binary.
 
-### Dependency updates (Renovate)
+### Dependency updates (Dependabot)
 
-[`renovate.json`](renovate.json) tracks npm dependencies in `apihub-api-diff`, including `@netcracker/qubership-apihub-api-processor` from GitHub Packages. Renovate opens PRs when new versions are published.
+[`.github/dependabot.yml`](.github/dependabot.yml) tracks npm dependencies in `apihub-api-diff`, including `@netcracker/qubership-apihub-api-processor` from GitHub Packages. Dependabot opens PRs on a weekly schedule when new versions are published.
 
 Requirements:
 
-1. Enable the [Renovate GitHub App](https://github.com/apps/renovate) for this repository (or the Netcracker org).
-2. Configure a host rule / token with `read:packages` for `npm.pkg.github.com` in Renovate settings so it can resolve `@netcracker/*` versions.
+1. Dependabot is enabled for this repository (GitHub **Settings → Code security → Dependabot**).
+2. Add Dependabot secret **`NPM_READ_TOKEN`** (**Settings → Secrets and variables → Dependabot**) — a GitHub PAT with `read:packages` scope for resolving `@netcracker/*` on `npm.pkg.github.com`.
 
 ## Adding a new tool
 
