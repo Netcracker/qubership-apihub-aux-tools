@@ -10,6 +10,7 @@ import (
 	"log"
 	"os"
 	"path/filepath"
+	"sync"
 )
 
 const workersCount = 10
@@ -59,8 +60,15 @@ func downloadCommand() {
 	extractedDir := filepath.Join(*downloadOutput, "extracted")
 	manifestPath := filepath.Join(*downloadOutput, "manifest.json")
 
+	if err := os.MkdirAll(*downloadOutput, 0755); err != nil {
+		log.Fatal(err)
+	}
+
+	var mu sync.Mutex
+	var downloadedTasks []tasks.Task
+
 	tasks.RunWorkers(workersCount, sourceFileIds, func(task tasks.Task) {
-		filename := fmt.Sprintf("%s-%s.zip", task.PackageId, task.Version)
+		filename := folderName(task) + ".zip"
 
 		// Download ZIP
 		body, err := c.GetVersionSource(task.PackageId, task.Version)
@@ -87,10 +95,7 @@ func downloadCommand() {
 
 		// Extract ZIP
 		zipPath := filepath.Join(downloadedDir, filename)
-		extractPath := filepath.Join(
-			extractedDir,
-			fmt.Sprintf("%s-%s", task.PackageId, task.Version),
-		)
+		extractPath := filepath.Join(extractedDir, folderName(task))
 
 		err = file.Unzip(zipPath, extractPath)
 		if err != nil {
@@ -103,16 +108,24 @@ func downloadCommand() {
 			return
 		}
 
+		mu.Lock()
+		downloadedTasks = append(downloadedTasks, task)
+		mu.Unlock()
+
 		log.Printf("Downloaded: %s/%s", task.PackageId, task.Version)
 	})
 
-	// Save metadata for upload step
-	err = manifest.Save(manifestPath, sourceFileIds)
+	err = manifest.Save(manifestPath, downloadedTasks)
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	log.Printf("Manifest saved: %s", manifestPath)
+	log.Printf(
+		"Manifest saved: %s (%d of %d revisions)",
+		manifestPath,
+		len(downloadedTasks),
+		len(sourceFileIds),
+	)
 }
 
 func uploadCommand() {
@@ -128,10 +141,8 @@ func uploadCommand() {
 	}
 
 	tasks.RunWorkers(workersCount, sourceFileIds, func(task tasks.Task) {
-		folderName := fmt.Sprintf("%s-%s", task.PackageId, task.Version)
-
-		sourcePath := filepath.Join(extractedDir, folderName)
-		zipPath := filepath.Join(fixedDir, folderName+".zip")
+		sourcePath := filepath.Join(extractedDir, folderName(task))
+		zipPath := filepath.Join(fixedDir, folderName(task)+".zip")
 
 		// Zip fixed sources
 		err := file.Zip(sourcePath, zipPath)
@@ -175,4 +186,8 @@ func uploadCommand() {
 
 		log.Printf("Uploaded: %s/%s", task.PackageId, task.Version)
 	})
+}
+
+func folderName(task tasks.Task) string {
+	return fmt.Sprintf("%s-%s", task.PackageId, task.Version)
 }

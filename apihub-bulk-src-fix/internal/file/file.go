@@ -4,6 +4,7 @@ import (
 	"apihub-bulk-src-fix/internal/tasks"
 	"archive/zip"
 	"bufio"
+	"fmt"
 	"io"
 	"os"
 	"path/filepath"
@@ -20,12 +21,22 @@ func ReadTasksFromFile(path string) ([]tasks.Task, error) {
 	var tasksList []tasks.Task
 
 	scanner := bufio.NewScanner(file)
+	lineNumber := 0
 
 	for scanner.Scan() {
+		lineNumber++
+
 		parts := strings.Split(scanner.Text(), " ")
 
 		if len(parts) != 2 {
 			continue
+		}
+
+		if !strings.Contains(parts[1], "@") {
+			return nil, fmt.Errorf(
+				"%s:%d: version %q has no revision, use <version>@<revision>",
+				path, lineNumber, parts[1],
+			)
 		}
 
 		tasksList = append(tasksList, tasks.Task{
