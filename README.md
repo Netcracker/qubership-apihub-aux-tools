@@ -23,6 +23,7 @@ Each tool lives in its **own subdirectory** with its own build instructions and 
 | [`apihub-portal-package-copy`](./apihub-portal-package-copy) | Go | **Copy published packages** (and optionally whole workspace subtrees) from one APIHUB instance to another using **original sources + publish config** REST APIs; supports resume, wildcards (`*` for versions or workspace scope), and **exclude lists**. |
 | [`apihub-build-config-diff`](./apihub-build-config-diff) | Go | Compare build config JSON `refs` to quickly identify added, removed, and changed references. |
 | [`apihub-api-diff`](./apihub-api-diff) | Node.js | CLI and local MCP server for categorized diff of OpenAPI, AsyncAPI, and GraphQL specifications. |
+| [`apihub-bulk-src-fix`](./apihub-bulk-src-fix) | Go | **Bulk fix of published sources**: download sources for a list of revisions, unpack them into per-revision folders for manual editing, pack them back and replace the sources of the same revisions. |
 
 ### apihub-op-group-creator
 
@@ -92,6 +93,24 @@ apihub-api-diff previous.yaml current.yaml --format md
 apihub-api-diff mcp
 ```
 
+### apihub-bulk-src-fix
+
+**What it does:** Downloads **`/versions/{version}/sources`** (zip) for every revision listed in an ids file, extracts each archive into its own folder, and records the revisions in `manifest.json`. After the documents are fixed by hand, it packs the folders back and **replaces** the sources of exactly those revisions via the admin API.
+
+**Authentication:** **`X-Personal-Access-Token`** header. The replace step uses `/api/v2/admin/...` and needs administrator rights.
+
+**When to use:** A defect affects **many published documents at once** (for example incorrect YAML after a parser update) and the fixes have to be applied to the original sources of specific revisions rather than republished as new versions.
+
+The ids file must pin the revision (`2026.3@3`, not `2026.3`): without it the API serves the latest revision at the moment of the request, which may change while the documents are being fixed.
+
+Details, flags, and the work directory layout: **[apihub-bulk-src-fix/README.md](./apihub-bulk-src-fix/README.md)**.
+
+Build:
+
+```bash
+cd apihub-bulk-src-fix && go build .
+```
+
 ## CI and releases
 
 This repository is a **monorepo**: each tool is versioned and released independently.
@@ -102,7 +121,7 @@ This repository is a **monorepo**: each tool is versioned and released independe
 
 | Tool | Trigger paths |
 |------|---------------|
-| Go tools | `apihub-op-group-creator/**`, `apihub-portal-package-copy/**`, `apihub-build-config-diff/**` |
+| Go tools | `apihub-op-group-creator/**`, `apihub-portal-package-copy/**`, `apihub-build-config-diff/**`, `apihub-bulk-src-fix/**` |
 | apihub-api-diff | `apihub-api-diff/**` |
 
 `apihub-api-diff` CI requires repository secret **`NPMRC`** with GitHub Packages auth for `@netcracker/*`:
@@ -123,6 +142,7 @@ Releases are **not** triggered by tags. Run the workflow for the tool you need f
 | apihub-portal-package-copy | `apihub-portal-package-copy/v*` | [Release apihub-portal-package-copy](https://github.com/Netcracker/qubership-apihub-aux-tools/actions/workflows/release-apihub-portal-package-copy.yml) |
 | apihub-build-config-diff | `apihub-build-config-diff/v*` | [Release apihub-build-config-diff](https://github.com/Netcracker/qubership-apihub-aux-tools/actions/workflows/release-apihub-build-config-diff.yml) |
 | apihub-api-diff | `apihub-api-diff/v*` | [Release apihub-api-diff](https://github.com/Netcracker/qubership-apihub-aux-tools/actions/workflows/release-apihub-api-diff.yml) |
+| apihub-bulk-src-fix | `apihub-bulk-src-fix/v*` | [Release apihub-bulk-src-fix](https://github.com/Netcracker/qubership-apihub-aux-tools/actions/workflows/release-apihub-bulk-src-fix.yml) |
 
 Go tools publish Linux and Windows binaries. `apihub-api-diff` also publishes a macOS binary.
 

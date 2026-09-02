@@ -15,6 +15,7 @@ jobs:
       apihub-portal-package-copy: ${{ steps.filter.outputs.apihub-portal-package-copy }}
       apihub-build-config-diff: ${{ steps.filter.outputs.apihub-build-config-diff }}
       apihub-api-diff: ${{ steps.filter.outputs.apihub-api-diff }}
+      apihub-bulk-src-fix: ${{ steps.filter.outputs.apihub-bulk-src-fix }}
     steps:
       - uses: actions/checkout@v4
 
@@ -32,6 +33,8 @@ jobs:
               - 'apihub-build-config-diff/**'
             apihub-api-diff:
               - 'apihub-api-diff/**'
+            apihub-bulk-src-fix:
+              - 'apihub-bulk-src-fix/**'
 
   apihub-op-group-creator:
     needs: changes
@@ -83,6 +86,23 @@ jobs:
 
       - name: Test
         run: cd ./apihub-build-config-diff && go test -v ./...
+
+  apihub-bulk-src-fix:
+    needs: changes
+    if: needs.changes.outputs.ci == 'true' || needs.changes.outputs.apihub-bulk-src-fix == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-go@v4
+        with:
+          go-version: '1.23'
+
+      - name: Build
+        run: cd ./apihub-bulk-src-fix && go build -v ./...
+
+      - name: Test
+        run: cd ./apihub-bulk-src-fix && go test -v ./...
 
   apihub-api-diff:
     needs: changes
