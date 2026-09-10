@@ -1,0 +1,40 @@
+# apihub-ddl-import config file.
+# Copy to ddl-import.yaml next to the binary (or pass --config <path>).
+# Every value can be overridden by a CLI flag; secrets can also come from env:
+#   APIHUB_API_KEY, GITLAB_TOKEN, DDL_GITLAB_TOKEN, COMMENTS_GITLAB_TOKEN
+# Precedence: flag > env > this file > default.
+
+apihub:
+  url: https://apihub.example.com
+  # apiKey: ""            # prefer env APIHUB_API_KEY over storing the key here
+  packageId: MY.WORKSPACE.REPORTING-DM
+
+ddlSource:
+  type: gitlab            # file | gitlab
+  repo: https://gitlab.example.com/group/ddl-repo
+  branch: main
+  path: db/ddl            # folder with .sql files (or a single .sql file for type=file)
+  # token: ""             # prefer env DDL_GITLAB_TOKEN / GITLAB_TOKEN
+
+commentsSource:
+  type: gitlab            # file | gitlab
+  repo: https://gitlab.example.com/group/docs-repo
+  branch: main
+  path: docs/comments-and-pfk.xlsx   # workbook with "List of Tables" + "Tables Specifications"
+  # token: ""             # prefer env COMMENTS_GITLAB_TOKEN / GITLAB_TOKEN
+
+output:
+  dir: ./ddl-import-out
+
+publish:
+  versionLabels: []       # e.g. ["Type:DEFAULT"]
+  timeout: 15m            # publish build poll timeout
+
+groups:
+  enabled: true
+  descriptionTemplate: "Tables of the %s domain"
+
+analytics:
+  # Regex (Go syntax) that detects data-type changes in change descriptions;
+  # any match makes the row Analytics Severity = breaking. Empty = built-in default.
+  dataTypeChangeRegex: ""
