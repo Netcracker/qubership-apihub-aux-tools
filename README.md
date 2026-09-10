@@ -12,7 +12,7 @@ Each tool lives in its **own subdirectory** with its own build instructions and 
 
 ## Requirements
 
-- **Go 1.23** and **Node.js ≥20** to build tools from source (see [CI](#ci-and-releases)).
+- **Go 1.23** (Go **1.25** for `apihub-ddl-import`) and **Node.js ≥20** to build tools from source (see [CI](#ci-and-releases)).
 - Appropriate **APIHUB permissions** (personal access token or API key, depending on the tool) and network access to the target instance.
 
 ## Tools
@@ -23,6 +23,7 @@ Each tool lives in its **own subdirectory** with its own build instructions and 
 | [`apihub-portal-package-copy`](./apihub-portal-package-copy) | Go | **Copy published packages** (and optionally whole workspace subtrees) from one APIHUB instance to another using **original sources + publish config** REST APIs; supports resume, wildcards (`*` for versions or workspace scope), and **exclude lists**. |
 | [`apihub-build-config-diff`](./apihub-build-config-diff) | Go | Compare build config JSON `refs` to quickly identify added, removed, and changed references. |
 | [`apihub-api-diff`](./apihub-api-diff) | Node.js | CLI and local MCP server for categorized diff of OpenAPI, AsyncAPI, and GraphQL specifications. |
+| [`apihub-ddl-import`](./apihub-ddl-import) | Go | **Merge raw PostgreSQL DDL with an Excel comments/PFK workbook** (from local files or GitLab), publish the enriched DDL to APIHUB, create per-domain **DDL table groups**, and download **enriched xlsx exports** (Group + Analytics Severity columns). |
 
 ### apihub-op-group-creator
 
@@ -92,6 +93,22 @@ apihub-api-diff previous.yaml current.yaml --format md
 apihub-api-diff mcp
 ```
 
+### apihub-ddl-import
+
+**What it does:** Fetches raw PostgreSQL DDL (folder of `.sql` files) and a comments workbook (`List of Tables` + `Tables Specifications` sheets) from local paths or GitLab, merges them into enriched DDL (`COMMENT ON` statements + foreign keys resolved by the `<table_stem>_id` naming convention), writes a detailed merge report, publishes the version to APIHUB, creates one **DDL table group per domain**, and downloads the DDL xlsx exports enriched with **Group** and **Analytics Severity** columns.
+
+**Authentication:** **`api-key`** header for APIHUB; **`PRIVATE-TOKEN`** for GitLab sources.
+
+**When to use:** Analysts maintain the DDL and the table/column documentation separately; this tool keeps APIHUB in sync with both in one command.
+
+Details, flags, config file, and warning codes: **[apihub-ddl-import/README.md](./apihub-ddl-import/README.md)**.
+
+Build:
+
+```bash
+cd apihub-ddl-import && go build .
+```
+
 ## CI and releases
 
 This repository is a **monorepo**: each tool is versioned and released independently.
@@ -102,7 +119,7 @@ This repository is a **monorepo**: each tool is versioned and released independe
 
 | Tool | Trigger paths |
 |------|---------------|
-| Go tools | `apihub-op-group-creator/**`, `apihub-portal-package-copy/**`, `apihub-build-config-diff/**` |
+| Go tools | `apihub-op-group-creator/**`, `apihub-portal-package-copy/**`, `apihub-build-config-diff/**`, `apihub-ddl-import/**` |
 | apihub-api-diff | `apihub-api-diff/**` |
 
 `apihub-api-diff` CI requires repository secret **`NPMRC`** with GitHub Packages auth for `@netcracker/*`:
@@ -123,6 +140,7 @@ Releases are **not** triggered by tags. Run the workflow for the tool you need f
 | apihub-portal-package-copy | `apihub-portal-package-copy/v*` | [Release apihub-portal-package-copy](https://github.com/Netcracker/qubership-apihub-aux-tools/actions/workflows/release-apihub-portal-package-copy.yml) |
 | apihub-build-config-diff | `apihub-build-config-diff/v*` | [Release apihub-build-config-diff](https://github.com/Netcracker/qubership-apihub-aux-tools/actions/workflows/release-apihub-build-config-diff.yml) |
 | apihub-api-diff | `apihub-api-diff/v*` | [Release apihub-api-diff](https://github.com/Netcracker/qubership-apihub-aux-tools/actions/workflows/release-apihub-api-diff.yml) |
+| apihub-ddl-import | `apihub-ddl-import/v*` | [Release apihub-ddl-import](https://github.com/Netcracker/qubership-apihub-aux-tools/actions/workflows/release-apihub-ddl-import.yml) |
 
 Go tools publish Linux and Windows binaries. `apihub-api-diff` also publishes a macOS binary.
 
