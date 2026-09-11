@@ -139,7 +139,7 @@ func Zip(source, destination string) error {
 			return err
 		}
 
-		writer, err := archive.Create(relativePath)
+		writer, err := archive.Create(filepath.ToSlash(relativePath))
 		if err != nil {
 			return err
 		}
