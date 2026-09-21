@@ -94,6 +94,7 @@ Secrets via environment: `APIHUB_API_KEY`, `GITLAB_TOKEN` (both sources), `DDL_G
 | `--dry-run` | Merge + report only, zero APIHUB calls |
 | `--strict` | Exit 3 before publish when the merge has warnings |
 | `--skip-groups`, `--skip-exports` | Skip the respective steps |
+| `--skip-enrichment` | Keep APIHUB's raw exports — do not add the `Group`/`Analytics Severity` custom columns |
 | `--insecure-skip-tls-verify` | Skip TLS verification (APIHUB and GitLab) |
 | `--no-color`, `--debug` | Console output control |
 
@@ -141,6 +142,18 @@ The test suite includes the ten fixture cases from the DDL-merge spec (`testdata
 1. `apihub-ddl-import --version 2026.1 --previous-version none --status draft --ddl-path testdata/ddl --comments-path testdata/cases/case-01/comments-and-pfk.xlsx --apihub-url … --package-id … `
    — expect a clean merge, publish `complete`, 75 DDL entities, 12 groups, an enriched entities export.
 2. Re-run with `--version 2026.2 --previous-version 2026.1` and the case-10 workbook — expect warnings in the report and the enriched **changes** export with the `Analytics Severity` column.
+
+## Running as a GitLab CI job
+
+For analysts who shouldn't need a local CLI, the tool can run as a GitLab pipeline **inside the comments/docs repository itself** — "Run pipeline" becomes the UI for the import+export action, with typed input parameters (including a real checkbox) and the exports published as job artifacts.
+
+A ready-to-copy template lives at [`e2e-demo/seed/docs/.gitlab-ci.yml`](./e2e-demo/seed/docs/.gitlab-ci.yml) (also seeded into the local demo GitLab's `apihub-demo/docs` repo by `e2e-demo/seed-gitlab.sh` — see [e2e-demo/README.md](./e2e-demo/README.md) for a full working example, including how to stand up a GitLab Runner). Key points:
+
+- Uses GitLab's [pipeline input parameters](https://docs.gitlab.com/ci/inputs/) (`spec:inputs`) for `version`, `previous_version`, `status`, the DDL repo coordinates, `package_id`, and an **`export_custom_columns` boolean** — GitLab renders `type: boolean` as an actual checkbox on the "Run pipeline" page. Unchecking it maps to `--skip-enrichment`.
+- The comments workbook is read straight from the job's own checkout (`--comments-source-type file --comments-path docs/comments-and-pfk.xlsx`) — no GitLab token needed for that side.
+- Secrets (`APIHUB_API_KEY`, a `DDL_GITLAB_TOKEN` for the external DDL repo) are project CI/CD variables, picked up automatically through the tool's existing environment-variable support — they never appear as pipeline inputs or in logs.
+- The job currently builds the tool from source (`git clone` a pinned ref of this repo + `go build`) since no `apihub-ddl-import` release has been cut yet; once one exists, swap that one step for a `curl` of the release binary.
+- `artifacts: { when: always, paths: [ddl-import-out/report.md, ddl-import-out/report.json, ddl-import-out/export/, ddl-import-out/enriched/] }` so both successful and failed runs leave the report and exports attached to the job.
 
 ## Known assumptions / limitations
 

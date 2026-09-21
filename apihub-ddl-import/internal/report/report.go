@@ -56,6 +56,9 @@ type ExportFile struct {
 	GroupFilled       int    `json:"groupFilled"`
 	GroupAppended     bool   `json:"groupAppended,omitempty"`
 	AnalyticsFallback bool   `json:"analyticsFallback,omitempty"`
+	// Enriched is false when --skip-enrichment kept APIHUB's raw export
+	// (no Group / Analytics Severity columns added).
+	Enriched bool `json:"enriched"`
 }
 
 type ExportsInfo struct {
@@ -246,6 +249,10 @@ func (r *Report) Markdown() string {
 		fmt.Fprintf(&b, "\n## Exports\n\n")
 		for name, e := range map[string]*ExportFile{"entities": r.Exports.Entities, "changes": r.Exports.Changes} {
 			if e == nil {
+				continue
+			}
+			if !e.Enriched {
+				fmt.Fprintf(&b, "- %s: `%s` (raw export, no custom columns)\n", name, e.Path)
 				continue
 			}
 			fmt.Fprintf(&b, "- %s: `%s` (%d rows, Group filled in %d", name, e.Path, e.Rows, e.GroupFilled)

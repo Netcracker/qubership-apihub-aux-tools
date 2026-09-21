@@ -56,6 +56,7 @@ func run() int {
 	strict := fs.Bool("strict", false, "Exit with code 3 before publishing when the merge has warnings")
 	skipGroups := fs.Bool("skip-groups", false, "Skip the DDL table groups step")
 	skipExports := fs.Bool("skip-exports", false, "Skip the xlsx exports step")
+	skipEnrichment := fs.Bool("skip-enrichment", false, "Keep APIHUB's raw exports — do not add the Group/Analytics Severity custom columns")
 	insecureTLS := fs.Bool("insecure-skip-tls-verify", false, "Skip TLS certificate verification (APIHUB and GitLab)")
 	noColor := fs.Bool("no-color", false, "Disable colored output")
 	debug := fs.Bool("debug", false, "Verbose HTTP diagnostics")
@@ -169,6 +170,7 @@ func run() int {
 		Strict:          *strict,
 		SkipGroups:      *skipGroups,
 		SkipExports:     *skipExports,
+		SkipEnrichment:  *skipEnrichment,
 		InsecureTLS:     *insecureTLS,
 		PublishTimeout:  timeout,
 		VersionLabels:   labels,

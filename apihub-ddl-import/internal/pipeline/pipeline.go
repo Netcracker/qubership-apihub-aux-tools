@@ -45,6 +45,7 @@ type Options struct {
 	Strict          bool
 	SkipGroups      bool
 	SkipExports     bool
+	SkipEnrichment  bool
 	InsecureTLS     bool
 	PublishTimeout  time.Duration
 	VersionLabels   []string
@@ -302,6 +303,9 @@ func runExports(client *apihub.Client, cfg *config.Config, opts Options, res *mo
 		return
 	}
 	rep.Exports = &report.ExportsInfo{}
+	if opts.SkipEnrichment {
+		logx.Infof("enrichment disabled (--skip-enrichment): exports will keep APIHUB's raw columns only")
+	}
 
 	var dataTypeRe *regexp.Regexp
 	if cfg.Analytics.DataTypeChangeRegex != "" {
@@ -325,16 +329,22 @@ func runExports(client *apihub.Client, cfg *config.Config, opts Options, res *mo
 	} else {
 		name := exportFileName("DDLEntities", cfg.Apihub.PackageID, opts.Version)
 		saveExport(exDir, name, raw)
-		out, info, err := enrich.Entities(raw, entOpts)
-		if err != nil {
-			logx.Errorf("enrich entities export: %v", err)
+		if opts.SkipEnrichment {
+			writeExport(exDir, name, raw)
+			rep.Exports.Entities = &report.ExportFile{Path: filepath.Join(exDir, name), Enriched: false}
+			logx.Okf("entities export: %s (raw, enrichment skipped)", name)
 		} else {
-			writeExport(exDir, name, out)
-			rep.Exports.Entities = exportInfo(filepath.Join(exDir, name), info)
-			for _, w := range info.Warnings {
-				rep.AddWarning(w)
+			out, info, err := enrich.Entities(raw, entOpts)
+			if err != nil {
+				logx.Errorf("enrich entities export: %v", err)
+			} else {
+				writeExport(exDir, name, out)
+				rep.Exports.Entities = exportInfo(filepath.Join(exDir, name), info)
+				for _, w := range info.Warnings {
+					rep.AddWarning(w)
+				}
+				logx.Okf("entities export: %s (%d rows, Group filled in %d)", name, info.Rows, info.GroupFilled)
 			}
-			logx.Okf("entities export: %s (%d rows, Group filled in %d)", name, info.Rows, info.GroupFilled)
 		}
 	}
 
@@ -351,6 +361,12 @@ func runExports(client *apihub.Client, cfg *config.Config, opts Options, res *mo
 	}
 	name := exportFileName("DDLChanges", cfg.Apihub.PackageID, opts.Version)
 	saveExport(exDir, name, raw)
+	if opts.SkipEnrichment {
+		writeExport(exDir, name, raw)
+		rep.Exports.Changes = &report.ExportFile{Path: filepath.Join(exDir, name), Enriched: false}
+		logx.Okf("changes export: %s (raw, enrichment skipped)", name)
+		return
+	}
 	chOpts := enrich.Options{
 		DomainByTable:  res.DomainByTable,
 		EntityIDByName: idByName,
@@ -391,6 +407,7 @@ func exportInfo(path string, info *enrich.Info) *report.ExportFile {
 		GroupFilled:       info.GroupFilled,
 		GroupAppended:     info.GroupAppended,
 		AnalyticsFallback: info.AnalyticsFallback,
+		Enriched:          true,
 	}
 }
 

@@ -69,7 +69,10 @@ func Create(c Client, packageID, version string, res *model.MergeResult, entitie
 		}
 		var ae *apihub.APIError
 		if errors.As(err, &ae) {
-			if ae.HTTPStatus == http.StatusNotFound || ae.HTTPStatus == http.StatusMethodNotAllowed {
+			if ae.HTTPStatus == http.StatusNotFound || ae.HTTPStatus == http.StatusMethodNotAllowed || ae.HTTPStatus == http.StatusMisdirectedRequest {
+				// Some deployed backends answer unmounted routes with 421
+				// "Requested unknown endpoint" instead of a plain 404/405 —
+				// observed live against a backend build without /ddl/groups.
 				out.APIAvailable = false
 				out.Warnings = append(out.Warnings, model.Warning{
 					Code: model.WGroupsApiUnavailable,

@@ -1,0 +1,55 @@
+# Local GitLab for the apihub-ddl-import e2e demo.
+# All credentials here are demo-only values for a throwaway local instance.
+#
+#   Start:  docker compose up -d          (first boot takes ~5 min)
+#   Reset:  docker compose down -v        (wipes all GitLab data)
+#
+# Web UI:  http://localhost:8929   (root / see initial_root_password below)
+
+name: apihub-e2e
+
+services:
+  gitlab:
+    image: gitlab/gitlab-ce:18.6.2-ce.0
+    container_name: apihub-e2e-gitlab
+    restart: unless-stopped
+    shm_size: "256m"
+    ports:
+      - "8929:8929" # HTTP — matches external_url
+      - "2224:22"   # SSH — optional, demo uses HTTP + PAT
+    environment:
+      GITLAB_OMNIBUS_CONFIG: |
+        external_url 'http://localhost:8929'
+        gitlab_rails['gitlab_shell_ssh_port'] = 2224
+        # Must not contain "gitlab" or other denylisted words, or the admin
+        # seed fails silently and the instance boots with no users at all.
+        gitlab_rails['initial_root_password'] = 'Otter-Quartz-9271!'
+        # Keep the demo instance lean
+        prometheus_monitoring['enable'] = false
+        gitlab_kas['enable'] = false
+    volumes:
+      - gitlab-config:/etc/gitlab
+      - gitlab-logs:/var/log/gitlab
+      - gitlab-data:/var/opt/gitlab
+
+  # Executes the .gitlab-ci.yml jobs (docker executor, config rendered by
+  # register-runner.sh). Binds the HOST's docker socket to spawn job
+  # containers — a local-demo-only simplification, not a production pattern.
+  # Job containers reach GitLab/APIHUB via host.docker.internal (Docker
+  # Desktop); if that doesn't resolve on your platform, join this service to
+  # the same network as `gitlab` and/or add extra_hosts.
+  gitlab-runner:
+    image: gitlab/gitlab-runner:v18.6.1
+    container_name: apihub-e2e-runner
+    restart: unless-stopped
+    depends_on:
+      - gitlab
+    volumes:
+      - gitlab-runner-config:/etc/gitlab-runner
+      - /var/run/docker.sock:/var/run/docker.sock
+
+volumes:
+  gitlab-config:
+  gitlab-logs:
+  gitlab-data:
+  gitlab-runner-config:

@@ -1,0 +1,123 @@
+# GitLab CI job for apihub-ddl-import: gives analysts a "Run pipeline" UI for
+# the import (merge + publish + groups) and export action, instead of a local
+# CLI invocation. Lives in the comments/docs repository itself — the workbook
+# is read straight from this job's own checkout, so only the DDL source needs
+# a GitLab token.
+#
+# This copy is wired for the local apihub-ddl-import e2e demo (see
+# ../../README.md): defaults below point at the demo's apihub-demo/ddl repo
+# and DEMO.RDM package. Copying this file into a real docs repo, change at
+# least: ddl_repo/ddl_branch/ddl_path/package_id defaults below, and the
+# project CI/CD variables APIHUB_URL/APIHUB_API_KEY/DDL_GITLAB_TOKEN.
+#
+# TODO once a real apihub-ddl-import release is cut (currently none exist —
+# see the tool's README "Running as a GitLab CI job"): replace the
+# "Build the tool" script step below with a `curl` of the released binary
+# instead of a git clone + go build; everything else stays the same.
+
+spec:
+  inputs:
+    version:
+      type: string
+      default: ""
+      description: "APIHUB version to publish, e.g. 2026.5 (required)"
+    previous_version:
+      type: string
+      default: "none"
+      description: "Previous published version to diff against, or 'none' for the first publish"
+    status:
+      type: string
+      default: "draft"
+      options: ["draft", "release"]
+      description: "Version status to publish as"
+    ddl_repo:
+      type: string
+      default: "http://host.docker.internal:8929/apihub-demo/ddl"
+      description: "GitLab repository holding the raw DDL .sql files"
+    ddl_branch:
+      type: string
+      default: "main"
+    ddl_path:
+      type: string
+      default: "db/ddl"
+      description: "Folder inside ddl_repo containing the .sql files"
+    package_id:
+      type: string
+      default: "DEMO.RDM"
+      description: "APIHUB package to publish into"
+    export_custom_columns:
+      type: boolean
+      default: true
+      description: "Add the Group and Analytics Severity custom columns to the DDL export (uncheck for APIHUB's raw/native export)"
+---
+
+stages:
+  - ddl-import-export
+
+variables:
+  APIHUB_URL: "http://host.docker.internal:8090"
+  TOOL_REPO: "https://github.com/Netcracker/qubership-apihub-aux-tools.git"
+  TOOL_REF: "ddl_export_import" # switch to "main" (or a apihub-ddl-import/vX.Y.Z tag) once merged/released
+  GIT_STRATEGY: clone
+
+ddl_import_export:
+  stage: ddl-import-export
+  image: golang:1.25
+  rules:
+    - if: '$CI_PIPELINE_SOURCE == "web" || $CI_PIPELINE_SOURCE == "api"'
+  cache:
+    key: "gomod-$TOOL_REF"
+    paths:
+      - /root/go/pkg/mod
+  script:
+    - |
+      set -euo pipefail
+
+      if [ -z "$[[ inputs.version ]]" ]; then
+        echo "The 'version' input is required — set it when running the pipeline." >&2
+        exit 1
+      fi
+      if [ -z "${APIHUB_API_KEY:-}" ]; then
+        echo "APIHUB_API_KEY project CI/CD variable is not set." >&2
+        exit 1
+      fi
+      if [ -z "${DDL_GITLAB_TOKEN:-}" ]; then
+        echo "DDL_GITLAB_TOKEN project CI/CD variable is not set." >&2
+        exit 1
+      fi
+
+      echo "== Building apihub-ddl-import ($TOOL_REPO@$TOOL_REF) =="
+      git clone --depth 1 --branch "$TOOL_REF" "$TOOL_REPO" /tmp/aux-tools
+      ( cd /tmp/aux-tools/apihub-ddl-import && go build -o /usr/local/bin/apihub-ddl-import . )
+
+      EXPORT_FLAG=""
+      if [ "$[[ inputs.export_custom_columns ]]" = "false" ]; then
+        EXPORT_FLAG="--skip-enrichment"
+      fi
+
+      echo "== Running apihub-ddl-import =="
+      apihub-ddl-import \
+        --version "$[[ inputs.version ]]" \
+        --previous-version "$[[ inputs.previous_version ]]" \
+        --status "$[[ inputs.status ]]" \
+        --apihub-url "$APIHUB_URL" \
+        --apihub-api-key "$APIHUB_API_KEY" \
+        --package-id "$[[ inputs.package_id ]]" \
+        --ddl-source-type gitlab \
+        --ddl-repo "$[[ inputs.ddl_repo ]]" \
+        --ddl-branch "$[[ inputs.ddl_branch ]]" \
+        --ddl-path "$[[ inputs.ddl_path ]]" \
+        --ddl-token "$DDL_GITLAB_TOKEN" \
+        --comments-source-type file \
+        --comments-path "docs/comments-and-pfk.xlsx" \
+        --output-dir "$CI_PROJECT_DIR/ddl-import-out" \
+        --version-labels "gitlab-ci" \
+        $EXPORT_FLAG
+  artifacts:
+    when: always
+    expire_in: 30 days
+    paths:
+      - ddl-import-out/report.md
+      - ddl-import-out/report.json
+      - ddl-import-out/export/
+      - ddl-import-out/enriched/

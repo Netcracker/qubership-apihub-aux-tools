@@ -1,0 +1,30 @@
+# Template for the e2e-demo APIHUB backend config. start-backend.sh renders
+# this into config.yaml (gitignored) next to it, substituting {{JWT_KEY}}.
+# See ../../../../qubership-apihub-backend_3/docs/local_development/local_development.md
+# for what each section means.
+database:
+  host: 'localhost'
+  port: 5432
+  name: 'apihub_e2e'
+  username: 'apihub'
+  password: 'apihub'
+security:
+  productionMode: false
+  jwt:
+    privateKey: '{{JWT_KEY}}'
+  apihubExternalUrl: 'http://localhost:8095'
+zeroDayConfiguration:
+  accessToken: 'apihub-e2e-zero-day-access-token-0123456789'
+  adminEmail: 'admin@example.com'
+  adminPassword: 'apihub-e2e-admin-pass'
+technicalParameters:
+  listenAddress: ':8095'
+  basePath: '.'
+  apiSpecDirectory: '{{BACKEND_REPO}}/docs/api'
+  ephemeralFileDirectory: './ephemeral'
+# Non-default ports: the default 47375/47376 collide with other local APIHUB
+# backend instances (see README "Gotchas").
+olric:
+  discoveryMode: 'local'
+  bindPort: 47385
+  memberlistPort: 47386
