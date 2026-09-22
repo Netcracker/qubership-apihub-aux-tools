@@ -79,7 +79,10 @@ func Create(c Client, packageID, version string, res *model.MergeResult, entitie
 					Msg: fmt.Sprintf("the APIHUB backend does not expose POST /ddl/groups (status %d) — "+
 						"table groups are skipped; the Group column of the exports is still filled by the tool", ae.HTTPStatus),
 				})
-				logx.Warnf("DDL groups API unavailable (status %d), skipping the groups step", ae.HTTPStatus)
+				// Zero groups ever get created once this triggers, which the
+				// pipeline now always treats as fatal — log at error level,
+				// not warning, to match.
+				logx.Errorf("DDL groups API unavailable (status %d), skipping the groups step", ae.HTTPStatus)
 				return out
 			}
 			if ae.Code == codeGroupAlreadyExists {
