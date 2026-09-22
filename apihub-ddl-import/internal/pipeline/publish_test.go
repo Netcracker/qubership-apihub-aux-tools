@@ -13,6 +13,7 @@ import (
 	"github.com/xuri/excelize/v2"
 
 	"apihub-ddl-import/internal/config"
+	"apihub-ddl-import/internal/model"
 )
 
 // buildXlsx assembles a minimal single-sheet "DDL" workbook (the shape APIHUB's
@@ -271,5 +272,70 @@ func TestPublishSkipEnrichmentToggle(t *testing.T) {
 		if !bytes.Contains(mdData, []byte("raw export, no custom columns")) {
 			t.Error("report.md must note the raw/skipped-enrichment exports")
 		}
+	}
+}
+
+// TestPublishGroupsTotalFailureIsFatal locks in a live-discovered requirement:
+// a published version with zero successfully created DDL table groups is a
+// failed deliverable, not a warning to bury under an otherwise-green exit
+// code — this applies whether the backend flatly lacks /ddl/groups (observed
+// live: APIHUB answering 421 "Requested unknown endpoint" for every domain)
+// or every individual domain attempt fails for some other reason.
+func TestPublishGroupsTotalFailureIsFatal(t *testing.T) {
+	const pkg, version, prevVersion = "TEST.PKG", "2026.2", "2026.1"
+
+	ddlPath := writeMiniDDL(t)
+	commentsPath := buildInputCommentsXlsx(t)
+
+	mux := http.NewServeMux()
+	versionPath := func(v string) string { return "/api/v3/packages/" + pkg + "/versions/" + v }
+	mux.HandleFunc(versionPath(version), func(w http.ResponseWriter, r *http.Request) { http.NotFound(w, r) })
+	mux.HandleFunc(versionPath(prevVersion), func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		json.NewEncoder(w).Encode(map[string]any{"packageId": pkg, "version": prevVersion, "status": "release"})
+	})
+	mux.HandleFunc("/api/v2/packages/"+pkg+"/publish", func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusNoContent)
+	})
+	ddlBase := "/api/v1/packages/" + pkg + "/versions/" + version + "/ddl/"
+	mux.HandleFunc(ddlBase+"entities", func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		json.NewEncoder(w).Encode(map[string]any{"entities": []map[string]any{
+			{"ddlEntityId": "e1", "kind": "table", "schemaName": "public", "name": "t1", "description": "d1"},
+		}})
+	})
+	mux.HandleFunc(ddlBase+"groups", func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusMisdirectedRequest)
+		w.Write([]byte(`{"status":421,"message":"Requested unknown endpoint"}`))
+	})
+	srv := httptest.NewServer(mux)
+	defer srv.Close()
+
+	outDir := t.TempDir()
+	cfg := &config.Config{}
+	cfg.Apihub.URL = srv.URL
+	cfg.Apihub.APIKey = "test-key"
+	cfg.Apihub.PackageID = pkg
+	cfg.DDLSource = config.Source{Type: config.SourceFile, Path: ddlPath}
+	cfg.CommentsSource = config.Source{Type: config.SourceFile, Path: commentsPath}
+	cfg.Output.Dir = outDir
+	cfg.ApplyDefaults()
+	opts := Options{
+		Cfg:             cfg,
+		Version:         version,
+		PreviousVersion: prevVersion,
+		Status:          "draft",
+		SkipExports:     true, // irrelevant to this test, and the fatal exit happens before exports anyway
+		PublishTimeout:  time.Minute,
+	}
+	if code := Run(opts); code != ExitFatal {
+		t.Fatalf("exit = %d, want %d (ExitFatal)", code, ExitFatal)
+	}
+	reportData, err := os.ReadFile(filepath.Join(outDir, "report.json"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !bytes.Contains(reportData, []byte(model.FGroupsFailed)) {
+		t.Errorf("report.json must record the %s fatal code", model.FGroupsFailed)
 	}
 }

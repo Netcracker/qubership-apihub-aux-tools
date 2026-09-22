@@ -43,6 +43,7 @@ const (
 	FPublishFailed       = "F_PUBLISH_FAILED"         // publish build ended in error or timed out
 	FApihubUnreachable   = "F_APIHUB_UNREACHABLE"     // APIHUB preflight request failed
 	FNoDdlEntities       = "F_NO_DDL_ENTITIES"        // published version has zero DDL entities
+	FGroupsFailed        = "F_GROUPS_FAILED"          // DDL table groups were attempted but not a single one succeeded
 )
 
 // FatalError aborts the pipeline (exit code 1).

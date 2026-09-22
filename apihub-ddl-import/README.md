@@ -23,7 +23,7 @@ ddl-import-out/
 4. **Merge** (rules below) → enriched DDL + report (console, `report.md`, `report.json`).
 5. **Publish**: enriched files are zipped and posted to `POST /api/v2/packages/{id}/publish` (multipart `config` + `sources`), status `draft`/`release` per `--status`; the build status is polled until `complete`/`error`.
 6. **Verify**: the published version must expose DDL entities (`GET .../ddl/entities`); zero entities is a hard error (the APIHUB builder likely does not parse `.sql` sources).
-7. **Groups**: one DDL table group per workbook `Domain` (`POST .../ddl/groups`). On republish into an existing revision (duplicate group, code `8403`) the group membership is **replaced** via `PATCH`. If the deployed backend has no `/ddl/groups` yet (404/405), the step degrades to a single warning — the Group column of the exports is still filled by the tool.
+7. **Groups**: one DDL table group per workbook `Domain` (`POST .../ddl/groups`). On republish into an existing revision (duplicate group, code `8403`) the group membership is **replaced** via `PATCH`. **If not a single group ends up created** — whether the backend has no `/ddl/groups` at all (404/405, or 421 "Requested unknown endpoint", observed live on some deployments) or every individual domain fails for some other reason — that's a failed deliverable, not a warning: the run exits with `F_GROUPS_FAILED`. A partial result (some domains succeed, some don't) stays non-fatal (`GROUP_CREATE_FAILED` per domain). Use `--skip-groups` to publish without groups at all when that's intentional.
 8. **Exports**: `GET .../ddl/export/entities` (always) and `GET .../ddl/export/changes` (when a previous version exists) are downloaded and enriched:
    - **Group** — filled from the workbook domain for rows the backend left empty; if the export has no Group column at all (older backend), the tool appends one.
    - **Analytics Severity** (changes only) — computed per row from the per-entity change list (`GET .../ddl/entities/{id}/changes`) using the mapping: `annotation`, `semi-breaking` (*requiring attention*), `breaking`, `deprecated` → **breaking**; `non-breaking` → **non-breaking**; `unclassified` → **unclassified**; **exception: any data-type change is always breaking** (detected by a configurable regex on the change description). When per-change data is unavailable the value falls back to the severity count columns (reported as `ANALYTICS_FALLBACK_COUNTS`).
@@ -111,7 +111,7 @@ Secrets via environment: `APIHUB_API_KEY`, `GITLAB_TOKEN` (both sources), `DDL_G
 
 `TBL_DDL_ONLY`, `TBL_XLSX_ONLY`, `COL_DDL_ONLY` (columns of workbook-missing tables are counted too), `COL_XLSX_ONLY`, `DESC_EMPTY_TABLE`, `DESC_EMPTY_COLUMN`, `PK_MISMATCH`, `FK_UNRESOLVED`, `FK_AMBIGUOUS`, `FK_EXISTS`, `PFK_WITHOUT_PK`, `DUP_EXACT`, `DUP_CONFLICT`, `BAD_FLAG`, `SHEET_EMPTY`, `COMMENT_EXISTS`, `DUP_DDL_TABLE`, `GROUPS_API_UNAVAILABLE`, `GROUP_CREATE_FAILED`, `EXPORT_UNAVAILABLE`, `EXPORT_LAYOUT_UNKNOWN`, `EXPORT_GROUP_MISMATCH`, `ANALYTICS_FALLBACK_COUNTS`, `DESCRIPTIONS_MISSING`.
 
-Fatal codes: `F_XLSX_HEADER`, `F_XLSX_EMPTY`, `F_NO_DDL_FILES`, `F_DDL_PARSE`, `F_PREV_VERSION_NOT_FOUND`, `F_PUBLISH_FAILED`, `F_APIHUB_UNREACHABLE`, `F_NO_DDL_ENTITIES`.
+Fatal codes: `F_XLSX_HEADER`, `F_XLSX_EMPTY`, `F_NO_DDL_FILES`, `F_DDL_PARSE`, `F_PREV_VERSION_NOT_FOUND`, `F_PUBLISH_FAILED`, `F_APIHUB_UNREACHABLE`, `F_NO_DDL_ENTITIES`, `F_GROUPS_FAILED`.
 
 ## Backend endpoints used
 
