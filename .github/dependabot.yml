@@ -1,3 +1,4 @@
+# Version updates are paused. Set open-pull-requests-limit above 0 to resume them.
 version: 2
 
 registries:
@@ -12,6 +13,7 @@ updates:
     directory: /apihub-api-diff
     schedule:
       interval: weekly
+    open-pull-requests-limit: 0
     registries:
       - netcracker-npm
     groups:
