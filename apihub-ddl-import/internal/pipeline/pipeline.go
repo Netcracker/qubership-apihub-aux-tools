@@ -195,6 +195,7 @@ func Run(opts Options) int {
 			APIAvailable: out.APIAvailable,
 			Created:      out.Created,
 			Updated:      out.Updated,
+			Unchanged:    out.Unchanged,
 			Failed:       out.Failed,
 		}
 		for _, w := range out.Warnings {
@@ -205,7 +206,7 @@ func Run(opts Options) int {
 		// a failed deliverable, not something to bury in a warning list under an
 		// otherwise-green exit code.
 		attempted := !out.APIAvailable || len(out.Failed) > 0
-		succeeded := len(out.Created) + len(out.Updated)
+		succeeded := len(out.Created) + len(out.Updated) + len(out.Unchanged)
 		if attempted && succeeded == 0 {
 			return fail(model.Fatalf(model.FGroupsFailed,
 				"DDL table groups were requested but none could be created (created=0, updated=0, failed=%d, apiAvailable=%v) — see the DDL_TABLE_GROUPS warnings above; re-run with --skip-groups to publish without them",

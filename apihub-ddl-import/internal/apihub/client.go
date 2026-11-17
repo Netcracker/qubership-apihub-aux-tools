@@ -358,6 +358,63 @@ func (c *Client) getBinary(path string) ([]byte, error) {
 	return b, nil
 }
 
+// DdlGroup is one DDL table group on a published version. Publication copies
+// groups from the previous revision, or from the latest revision of the
+// previous version, so a version can already contain some or all of them.
+type DdlGroup struct {
+	GroupName   string `json:"groupName"`
+	Description string `json:"description,omitempty"`
+	TablesCount int    `json:"tablesCount"`
+}
+
+// ListDdlGroups returns the DDL table groups of the version. A 404, 405, or
+// 421 means this backend has no /ddl/groups route.
+func (c *Client) ListDdlGroups(packageID, version string) ([]DdlGroup, error) {
+	var body struct {
+		Groups []DdlGroup `json:"groups"`
+	}
+	code, raw, err := c.doJSON(http.MethodGet, ddlPath(packageID, version, "/groups"), nil, nil, &body)
+	if err != nil {
+		return nil, fmt.Errorf("list ddl groups: %w", err)
+	}
+	if code != http.StatusOK {
+		return nil, apiError(code, raw)
+	}
+	return body.Groups, nil
+}
+
+// ListDdlGroupEntityIDs returns every ddlEntityId in the group. The set is
+// what publication copied forward; callers compare it with the tables the
+// domain should contain.
+func (c *Client) ListDdlGroupEntityIDs(packageID, version, groupName string) ([]string, error) {
+	const limit = 100
+	var ids []string
+	for offset := 0; ; offset += limit {
+		q := url.Values{}
+		q.Set("limit", strconv.Itoa(limit))
+		q.Set("offset", strconv.Itoa(offset))
+		path := ddlPath(packageID, version, "/groups/"+url.PathEscape(groupName)) + "?" + q.Encode()
+		var page struct {
+			Entities []struct {
+				DdlEntityId string `json:"ddlEntityId"`
+			} `json:"entities"`
+		}
+		code, raw, err := c.doJSON(http.MethodGet, path, nil, nil, &page)
+		if err != nil {
+			return nil, fmt.Errorf("list ddl group %s: %w", groupName, err)
+		}
+		if code != http.StatusOK {
+			return nil, apiError(code, raw)
+		}
+		for _, entity := range page.Entities {
+			ids = append(ids, entity.DdlEntityId)
+		}
+		if len(page.Entities) < limit {
+			return ids, nil
+		}
+	}
+}
+
 // DdlGroupTable references a DDL entity to include in a group. PackageId and
 // Version stay empty for entities of the group's own version (dashboards only).
 type DdlGroupTable struct {

@@ -46,6 +46,7 @@ type GroupsInfo struct {
 	APIAvailable bool     `json:"apiAvailable"`
 	Created      []string `json:"created,omitempty"`
 	Updated      []string `json:"updated,omitempty"`
+	Unchanged    []string `json:"unchanged,omitempty"`
 	Failed       []string `json:"failed,omitempty"`
 	Skipped      bool     `json:"skipped,omitempty"`
 }
@@ -241,8 +242,8 @@ func (r *Report) Markdown() string {
 		case !r.Groups.APIAvailable:
 			fmt.Fprintf(&b, "The target APIHUB backend does not expose /ddl/groups yet — step skipped.\n")
 		default:
-			fmt.Fprintf(&b, "- created: %s\n- updated: %s\n- failed: %s\n",
-				listOrDash(r.Groups.Created), listOrDash(r.Groups.Updated), listOrDash(r.Groups.Failed))
+			fmt.Fprintf(&b, "- created: %s\n- updated: %s\n- unchanged: %s\n- failed: %s\n",
+				listOrDash(r.Groups.Created), listOrDash(r.Groups.Updated), listOrDash(r.Groups.Unchanged), listOrDash(r.Groups.Failed))
 		}
 	}
 	if r.Exports != nil {
