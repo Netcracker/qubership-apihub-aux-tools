@@ -60,9 +60,19 @@ func Create(c Client, packageID, version string, res *model.MergeResult, entitie
 		err := c.CreateDdlGroup(packageID, version, apihub.CreateDdlGroupReq{
 			GroupName:   domain,
 			Description: desc,
-			Tables:      tables,
 		})
 		if err == nil {
+			// The create endpoint always creates an empty group; membership is
+			// set with a follow-up update, same as the already-exists path below.
+			if uerr := c.UpdateDdlGroup(packageID, version, domain, apihub.UpdateDdlGroupReq{Tables: &tables}); uerr != nil {
+				out.Failed = append(out.Failed, domain)
+				out.Warnings = append(out.Warnings, model.Warning{
+					Code: model.WGroupCreateFailed,
+					Msg:  fmt.Sprintf("group %s created but tables not set: %v", domain, uerr),
+				})
+				logx.Errorf("group %s: %v", domain, uerr)
+				continue
+			}
 			out.Created = append(out.Created, domain)
 			logx.Okf("group %s created (%d tables)", domain, len(tables))
 			continue

@@ -47,6 +47,9 @@ func TestPublishVersionMultipart(t *testing.T) {
 		if r.URL.Path != "/api/v2/packages/pkg.a/publish" {
 			t.Errorf("path = %q", r.URL.Path)
 		}
+		if r.URL.Query().Get("resolveRefs") != "true" || r.URL.Query().Get("resolveConflicts") != "true" {
+			t.Errorf("query = %q", r.URL.RawQuery)
+		}
 		if err := r.ParseMultipartForm(32 << 20); err != nil {
 			t.Fatalf("parse multipart: %v", err)
 		}
@@ -132,7 +135,7 @@ func TestCreateDdlGroupErrors(t *testing.T) {
 		default:
 			var req CreateDdlGroupReq
 			json.NewDecoder(r.Body).Decode(&req)
-			if req.GroupName != "ACM" || len(req.Tables) != 2 || req.Tables[0].DdlEntityId != "tbl-1" {
+			if req.GroupName != "ACM" {
 				t.Errorf("req = %+v", req)
 			}
 			w.WriteHeader(http.StatusCreated)
@@ -140,7 +143,7 @@ func TestCreateDdlGroupErrors(t *testing.T) {
 	}))
 	defer srv.Close()
 	c := newTestClient(srv)
-	body := CreateDdlGroupReq{GroupName: "ACM", Tables: []DdlGroupTable{{DdlEntityId: "tbl-1"}, {DdlEntityId: "tbl-2"}}}
+	body := CreateDdlGroupReq{GroupName: "ACM"}
 
 	mode = "ok"
 	if err := c.CreateDdlGroup("pkg.a", "2026.1", body); err != nil {

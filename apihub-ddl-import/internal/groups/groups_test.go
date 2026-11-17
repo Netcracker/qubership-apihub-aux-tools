@@ -1,6 +1,7 @@
 package groups
 
 import (
+	"bytes"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -53,11 +54,23 @@ func TestCreateMisdirectedRequestTreatedAsUnavailable(t *testing.T) {
 
 func TestCreateSuccess(t *testing.T) {
 	var gotBody string
+	var sawPatch bool
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		buf := make([]byte, r.ContentLength)
 		r.Body.Read(buf)
-		gotBody = string(buf)
-		w.WriteHeader(http.StatusCreated)
+		switch r.Method {
+		case http.MethodPost:
+			gotBody = string(buf)
+			w.WriteHeader(http.StatusCreated)
+		case http.MethodPatch:
+			sawPatch = true
+			if !bytes.Contains(buf, []byte(`"tables":[{"ddlEntityId":"e1"}]`)) {
+				t.Errorf("patch body = %s", buf)
+			}
+			w.WriteHeader(http.StatusOK)
+		default:
+			t.Errorf("unexpected method %s", r.Method)
+		}
 	}))
 	defer srv.Close()
 
@@ -75,5 +88,10 @@ func TestCreateSuccess(t *testing.T) {
 	}
 	if gotBody == "" {
 		t.Error("expected a request body")
+	}
+	// The create endpoint ignores tables; membership must be set with a
+	// follow-up update, or a freshly created group is left empty.
+	if !sawPatch {
+		t.Error("expected a follow-up PATCH to set the group's tables")
 	}
 }

@@ -194,12 +194,13 @@ func (c *Client) PublishVersion(packageID string, sourcesZip, configJSON []byte)
 	if _, err := part.Write(sourcesZip); err != nil {
 		return "", false, err
 	}
-	_ = w.WriteField("resolveRefs", "true")
-	_ = w.WriteField("resolveConflicts", "true")
 	if err := w.Close(); err != nil {
 		return "", false, err
 	}
-	r, err := c.req(http.MethodPost, pkgPath(packageID)+"/publish", &b, map[string]string{"Content-Type": w.FormDataContentType()})
+	q := url.Values{}
+	q.Set("resolveRefs", "true")
+	q.Set("resolveConflicts", "true")
+	r, err := c.req(http.MethodPost, pkgPath(packageID)+"/publish?"+q.Encode(), &b, map[string]string{"Content-Type": w.FormDataContentType()})
 	if err != nil {
 		return "", false, err
 	}
@@ -365,10 +366,10 @@ type DdlGroupTable struct {
 	DdlEntityId string `json:"ddlEntityId"`
 }
 
+// CreateDdlGroupReq creates an empty group
 type CreateDdlGroupReq struct {
-	GroupName   string          `json:"groupName"`
-	Description string          `json:"description,omitempty"`
-	Tables      []DdlGroupTable `json:"tables"`
+	GroupName   string `json:"groupName"`
+	Description string `json:"description,omitempty"`
 }
 
 type UpdateDdlGroupReq struct {
