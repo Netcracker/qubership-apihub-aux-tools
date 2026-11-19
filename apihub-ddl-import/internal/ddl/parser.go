@@ -4,6 +4,7 @@
 package ddl
 
 import (
+	"regexp"
 	"strconv"
 	"strings"
 
@@ -46,6 +47,47 @@ func StripMarkers(content string) string {
 	return strings.Join(out, "\n")
 }
 
+// sqlKeywordRe matches a line that could begin real SQL: a comment or a
+// common statement keyword. Used to find where plain-text banner lines some
+// export tools prepend (not valid SQL) end and the actual DDL begins.
+var sqlKeywordRe = regexp.MustCompile(`(?i)^(CREATE|ALTER|DROP|COMMENT|INSERT|UPDATE|DELETE|GRANT|REVOKE|SET|BEGIN|COMMIT|ROLLBACK|SELECT|WITH|DO|CALL|VACUUM|ANALYZE|TRUNCATE|LOCK|START|SECURITY)\b`)
+
+// looksLikeSQLStart reports whether a trimmed line could begin real SQL. A
+// trailing "." (no ";") is treated as a prose sentence even if the line
+// happens to start with a word that is also a SQL keyword (e.g. "Do not...").
+func looksLikeSQLStart(t string) bool {
+	if strings.HasPrefix(t, "--") || strings.HasPrefix(t, "/*") {
+		return true
+	}
+	if strings.HasSuffix(t, ".") {
+		return false
+	}
+	return sqlKeywordRe.MatchString(t)
+}
+
+// stripLeadingDisclaimer drops leading plain-text lines (no SQL comment or
+// statement keyword) up to the first line that looks like real SQL. It only
+// reports ok when such a later line was found, so a file with no recognizable
+// SQL at all is left untouched rather than stripped to nothing.
+func stripLeadingDisclaimer(content string) (string, bool) {
+	lines := strings.Split(content, "\n")
+	cut := -1
+	for i, ln := range lines {
+		t := strings.TrimSpace(strings.TrimSuffix(ln, "\r"))
+		if t == "" {
+			continue
+		}
+		if looksLikeSQLStart(t) {
+			cut = i
+			break
+		}
+	}
+	if cut <= 0 {
+		return content, false
+	}
+	return strings.Join(lines[cut:], "\n"), true
+}
+
 // ParseFiles parses every source file and assembles the DDL model. Any file the
 // PostgreSQL grammar rejects aborts with a F_DDL_PARSE fatal error.
 func ParseFiles(files []model.File) (*model.DDLModel, error) {
@@ -70,6 +112,13 @@ func ParseFiles(files []model.File) (*model.DDLModel, error) {
 func parseFile(f model.File, m *model.DDLModel) (*model.DDLFile, []*alterInfo, error) {
 	content := StripMarkers(string(f.Data))
 	res, err := pgquery.Parse(content)
+	if err != nil {
+		if stripped, ok := stripLeadingDisclaimer(content); ok {
+			if res2, err2 := pgquery.Parse(stripped); err2 == nil {
+				content, res, err = stripped, res2, nil
+			}
+		}
+	}
 	if err != nil {
 		return nil, nil, model.Fatalf(model.FDdlParse, "%s: %v", f.RelPath, err)
 	}

@@ -199,6 +199,27 @@ func TestStripMarkersRoundTrip(t *testing.T) {
 	}
 }
 
+func TestParseStripsLeadingDisclaimer(t *testing.T) {
+	sql := "This script was generated automatically by ExampleTool.\n" +
+		"Do not edit it by hand, your changes will be lost.\n\n" +
+		"CREATE TABLE ord (id text NOT NULL);\n"
+	m, err := ParseFiles([]model.File{{RelPath: "s.sql", Data: []byte(sql)}})
+	if err != nil {
+		t.Fatalf("parse: %v", err)
+	}
+	if len(m.Tables) != 1 || m.Tables[0].Name != "ord" {
+		t.Fatalf("tables = %v", m.Tables)
+	}
+}
+
+func TestParseKeepsDisclaimerOnlyErrors(t *testing.T) {
+	_, err := ParseFiles([]model.File{{RelPath: "bad.sql", Data: []byte("Just some prose with no SQL at all.\n")}})
+	var fe *model.FatalError
+	if !errors.As(err, &fe) || fe.Code != model.FDdlParse {
+		t.Fatalf("err = %v, want FatalError %s", err, model.FDdlParse)
+	}
+}
+
 func TestQuoteIdent(t *testing.T) {
 	cases := map[string]string{
 		"plain":      "plain",
