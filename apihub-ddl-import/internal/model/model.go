@@ -21,6 +21,7 @@ const (
 	WDupConflict     = "DUP_CONFLICT"      // duplicate workbook rows with conflicting content, no comment emitted
 	WBadFlag         = "BAD_FLAG"          // unrecognized IsPK/Constraint value
 	WSheetEmpty      = "SHEET_EMPTY"       // one sheet has no data rows (both empty is fatal)
+	WRowMissingKey   = "ROW_MISSING_KEY"   // non-empty row is missing a required row key (Table Name / Column Name), skipped
 	WCommentExists   = "COMMENT_EXISTS"    // source DDL already carries COMMENT ON for this target (ours appended, last wins)
 	WDupDdlTable     = "DUP_DDL_TABLE"     // same table defined twice in the DDL sources (first wins)
 

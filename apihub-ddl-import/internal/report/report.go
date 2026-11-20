@@ -107,7 +107,7 @@ var categoryOrder = []string{
 	model.WPkMismatch,
 	model.WFkUnresolved, model.WFkAmbiguous, model.WFkExists, model.WPfkWithoutPk,
 	model.WDupExact, model.WDupConflict, model.WBadFlag,
-	model.WSheetEmpty, model.WCommentExists, model.WDupDdlTable,
+	model.WSheetEmpty, model.WRowMissingKey, model.WCommentExists, model.WDupDdlTable,
 	model.WGroupsApiUnavailable, model.WGroupCreateFailed,
 	model.WExportUnavailable, model.WExportLayoutUnknown, model.WExportGroupMismatch,
 	model.WAnalyticsFallback, model.WDescriptionsMissing,
